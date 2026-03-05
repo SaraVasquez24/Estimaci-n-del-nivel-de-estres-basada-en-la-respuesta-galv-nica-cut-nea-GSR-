@@ -54,36 +54,103 @@ Para analizar el comportamiento del circuito, el sistema puede modelarse de form
 La resistencia de la piel humana puede variar dependiendo de factores como la humedad, la presión de los electrodos, la temperatura y el estado fisiológico de la persona. En general, este valor puede encontrarse en un rango aproximado de varios kiloohmios a cientos de kiloohmios.
 
 La corriente que circula por el circuito se puede calcular aplicando la Ley de Ohm, considerando que las resistencias están en serie:
+
 $I = \frac{V}{R_1 + R_{skin}}$
+
+Donde:
+
+𝐼 es la corriente que circula por el sistema
+𝑉 es el voltaje de alimentación (3.3 V)
+𝑅1 es la resistencia fija del circuito
+𝑅𝑠𝑘𝑖𝑛 es la resistencia de la piel del usuario
+
+Al considerar valores típicos de resistencia en este tipo de mediciones, la corriente resultante es extremadamente baja, generalmente en el orden de microamperios (µA). Incluso si se analiza una condición desfavorable en la que la resistencia de la piel disminuye, la presencia de la resistencia fija en serie limita significativamente el paso de corriente.
+
+Este valor calculado es mucho menor al umbral de 1 mA, que se considera el límite a partir del cual una persona puede empezar a percibir el paso de corriente eléctrica. Por lo tanto, el diseño del sistema asegura que la corriente que atraviesa el cuerpo sea muy inferior a los niveles peligrosos, cumpliendo con los principios de seguridad eléctrica utilizados en instrumentación biomédica.
+
+En consecuencia, el circuito propuesto puede considerarse seguro para el usuario, ya que la combinación de bajo voltaje de alimentación y limitación de corriente mediante resistencias garantiza que incluso en condiciones desfavorables el usuario no estará expuesto a riesgos eléctricos significativos durante la medición.
+
 
 ---
 
 # 4. Diseño del dispositivo vestible
 
-El dispositivo está concebido como un **sistema portátil y ergonómico**, que permite la adquisición continua de la señal GSR sin interferir con las actividades cotidianas del usuario.
+El dispositivo está concebido como un **sistema portátil, ligero y ergonómico**, diseñado para permitir la **adquisición continua de la señal GSR (Galvanic Skin Response)** sin interferir significativamente con las actividades cotidianas del usuario. 
+
+El objetivo del diseño es que el sistema pueda utilizarse durante periodos prolongados de tiempo, permitiendo registrar cambios fisiológicos asociados al **estrés, excitación emocional o actividad del sistema nervioso autónomo**, mientras la persona realiza actividades normales como trabajar, estudiar o interactuar con dispositivos electrónicos.
+
+---
 
 ## Componentes principales
 
-- **Unidad electrónica:** ubicada en la muñeca, similar a un reloj inteligente. Contiene el microcontrolador **ESP32**, el circuito de medición y los módulos de transmisión de datos.
-- **Electrodos:** dos discos metálicos tipo moneda, fijados en la palma de la mano mediante adhesivos o soportes flexibles, garantizando contacto estable y cómodo.
+El sistema está compuesto por varios elementos electrónicos que permiten la medición, procesamiento y transmisión de la señal fisiológica.
+
+### Unidad electrónica
+
+Ubicada en la muñeca, con un formato similar al de un **reloj inteligente o pulsera biométrica**. Esta unidad contiene:
+
+- Microcontrolador ESP32
+- Circuito de medición de conductancia de la piel
+- Sistema de acondicionamiento de señal
+- Fuente de alimentación
+- Módulo de comunicación inalámbrica (Bluetooth)
+
+El ESP32 se encarga de adquirir la señal analógica proveniente de los electrodos, procesarla y transmitir los datos hacia un computador o dispositivo móvil para su posterior análisis.
+
+### Electrodos
+
+Se utilizan dos electrodos metálicos tipo disco o moneda, colocados sobre la superficie de la piel.
+
+Los electrodos se fijan en la palma de la mano mediante adhesivos médicos o soportes flexibles que permiten:
+
+- Mantener contacto estable con la piel  
+- Reducir artefactos por movimiento  
+- Garantizar comodidad durante el uso  
+
+Estos electrodos permiten medir los cambios en la **conductancia eléctrica de la piel**, asociados a la actividad de las glándulas sudoríparas.
+
+---
 
 ## Justificación de la ubicación de los electrodos
 
-La palma de la mano es una región óptima porque:
+La **palma de la mano** es una de las zonas más utilizadas en mediciones de GSR debido a sus características fisiológicas.
 
-- Tiene **alta densidad de glándulas sudoríparas ecrinas**, muy sensibles a la actividad simpática.
-- Ofrece **mayor sensibilidad a cambios fisiológicos**.
-- Presenta **mejor relación señal–ruido** y menor interferencia externa.
-- Permite un **contacto estable y confiable** entre electrodo y piel.
+Las principales razones son:
+
+- Alta densidad de glándulas sudoríparas ecrinas, controladas por el sistema nervioso simpático.
+- Mayor sensibilidad a cambios fisiológicos relacionados con el estrés o la actividad emocional.
+- Mejor relación señal ruido, lo que facilita la detección de variaciones en la conductancia.
+- Contacto más estable entre electrodo y piel, reduciendo interferencias externas.
+
+Por estas razones, la palma es una ubicación ampliamente utilizada en estudios psicofisiológicos y experimentos de respuesta emocional.
+
+---
 
 ## Ventajas del diseño
 
-- **Portabilidad:** el módulo en la muñeca mantiene el sistema compacto.
-- **Comodidad:** los electrodos en la palma no interfieren con movimientos naturales.
-- **Fiabilidad:** la configuración asegura registros precisos incluso durante tareas cognitivas o actividades cotidianas.
+El diseño propuesto busca combinar **precisión en la medición, comodidad para el usuario y portabilidad**.
 
-Este diseño convierte al dispositivo en una herramienta práctica para:
+**Portabilidad**
+- El módulo electrónico en la muñeca mantiene el sistema compacto y fácil de transportar.
 
-- Investigación psicofisiológica  
-- Monitoreo de estrés  
-- Aplicaciones de interacción humano–máquina
+**Comodidad**
+- Los electrodos en la palma permiten mediciones sin limitar significativamente los movimientos naturales de la mano.
+
+**Fiabilidad**
+- La configuración mejora la estabilidad de la señal y reduce interferencias externas.
+
+**Monitoreo continuo**
+- Permite registrar señales fisiológicas durante periodos prolongados.
+
+---
+
+## Aplicaciones del dispositivo
+
+Este sistema puede utilizarse en diferentes áreas:
+
+- Investigación psicofisiológica
+- Monitoreo de estrés
+- Estudios de respuesta emocional
+- Interacción humano–máquina
+
+Gracias a su diseño portátil y seguro, el dispositivo puede emplearse como una herramienta práctica para el monitoreo fisiológico en tiempo real.

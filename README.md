@@ -8,7 +8,9 @@ Sara Damaris Vasquez Cardenas y Paula Andrea Vega Pardo
 
 La **actividad electrodérmica (EDA)** es un fenómeno fisiológico que refleja la interacción entre el sistema nervioso autónomo y la piel. Se manifiesta como variaciones en la conductancia cutánea, directamente relacionadas con la activación de las glándulas sudoríparas ecrinas, controladas por el sistema nervioso simpático.
 
-Cuando una persona enfrenta estímulos emocionales (miedo, alegría, ansiedad), cognitivos (atención, concentración) o fisiológicos (dolor, esfuerzo físico), se produce un aumento en la actividad simpática. Este incremento activa las glándulas sudoríparas, generando sudoración imperceptible que altera la conductividad eléctrica de la piel.
+Cuando un individuo se expone a estímulos de diversa naturaleza —ya sean emocionales como el miedo, la alegría o la ansiedad; cognitivos como la atención sostenida o la concentración intensa; o fisiológicos como el dolor o el esfuerzo físico— se produce una activación del sistema nervioso simpático. Este aumento en la actividad autonómica desencadena la estimulación de las glándulas sudoríparas ecrinas, responsables de la sudoración.
+Aunque la cantidad de sudor liberada en estas circunstancias suele ser mínima y, en la mayoría de los casos, imperceptible para la persona, resulta suficiente para modificar las propiedades eléctricas de la piel. En particular, se altera su conductividad eléctrica, lo que permite que estos cambios sean detectados mediante sensores adecuados.
+Este fenómeno constituye la base de la respuesta galvánica cutánea (GSR), ya que la variación en la conductancia refleja de manera directa la intensidad de la activación simpática frente a estímulos internos o externos. En otras palabras, la piel actúa como un indicador fisiológico sensible, capaz de registrar de forma objetiva las reacciones emocionales, cognitivas o físicas del organismo.
 
 La señal de **respuesta galvánica cutánea (GSR)** se analiza en dos componentes:
 

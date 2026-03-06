@@ -235,6 +235,9 @@ Por estas razones, aunque la medición de conductancia cutánea tiene potencial 
 
 ## Gráfica de Calibración
 
+<img width="754" height="599" alt="image" src="https://github.com/user-attachments/assets/0aa4e427-d6ab-472c-9ff8-b9809a02b507" />
+
+
 La primera gráfica corresponde al proceso de calibración del sistema GSR/EDA, donde se establece el nivel basal de conductancia cutánea del usuario antes de comenzar la medición en tiempo real.
 
 Durante los primeros segundos se observa que la señal del ADC se mantiene estable alrededor de 4100 unidades, lo cual indica que el usuario se encontraba en reposo y sin estímulos que activaran el sistema nervioso simpático. Esta estabilidad es fundamental, ya que permite calcular de forma confiable los parámetros estadísticos de referencia del sistema:
@@ -275,6 +278,9 @@ En general, la gráfica muestra que el sistema es capaz de detectar cambios fisi
 
 
 ### Gráfica en tiempo real
+
+<img width="748" height="591" alt="image" src="https://github.com/user-attachments/assets/6ffbeba2-5014-4558-bd06-c1aeef83da24" />
+
 
 La segunda figura muestra la señal normalizada mediante Z-score, lo que permite evaluar el nivel de activación fisiológica respecto a la calibración inicial.
 

@@ -230,6 +230,309 @@ Por otro lado, los dispositivos utilizados en entornos clínicos deben cumplir e
 
 Por estas razones, aunque la medición de conductancia cutánea tiene potencial en el monitoreo fisiológico neonatal, el dispositivo construido en laboratorio debe considerarse únicamente como **un prototipo educativo y experimental**, y no como una herramienta clínica para la evaluación del estrés en recién nacidos.
 
+
+## Análisis de gráficas y código
+
+## Gráfica de Calibración
+
+La primera gráfica corresponde al proceso de calibración del sistema GSR/EDA, donde se establece el nivel basal de conductancia cutánea del usuario antes de comenzar la medición en tiempo real.
+
+Durante los primeros segundos se observa que la señal del ADC se mantiene estable alrededor de 4100 unidades, lo cual indica que el usuario se encontraba en reposo y sin estímulos que activaran el sistema nervioso simpático. Esta estabilidad es fundamental, ya que permite calcular de forma confiable los parámetros estadísticos de referencia del sistema:
+
+μ (mu): valor promedio de la señal basal.
+
+σ (sigma): desviación estándar de la señal.
+
+Estos parámetros se utilizan posteriormente para normalizar la señal mediante Z-score, lo que permite comparar cambios fisiológicos respecto al estado basal del usuario.
+
+Aproximadamente entre −3 s y −2 s se observa una caída pronunciada de la señal hasta cerca de 2700 unidades ADC. Este cambio puede interpretarse como un aumento temporal en la conductancia de la piel, lo cual implica una disminución de la resistencia cutánea. Fisiológicamente esto ocurre cuando:
+
+aumenta la actividad del sistema nervioso simpático
+
+se activan las glándulas sudoríparas ecrinas
+
+se incrementa ligeramente la humedad de la piel
+
+Posteriormente la señal regresa gradualmente al nivel basal cercano a 4100, lo cual indica que la activación fisiológica fue momentánea.
+
+En términos de GSR, este comportamiento corresponde a una respuesta de conductancia cutánea (SCR) caracterizada por:
+
+incremento rápido
+
+recuperación lenta hacia el nivel basal
+
+Este tipo de respuesta puede estar asociado a estímulos como:
+
+una respiración profunda
+
+un pequeño movimiento
+
+un cambio emocional leve
+
+variación en la presión de los electrodos.
+
+En general, la gráfica muestra que el sistema es capaz de detectar cambios fisiológicos reales en la conductancia cutánea, lo que confirma el correcto funcionamiento del circuito y del proceso de adquisición.
+
+
+### Gráfica en tiempo real
+
+La segunda figura muestra la señal normalizada mediante Z-score, lo que permite evaluar el nivel de activación fisiológica respecto a la calibración inicial.
+
+En esta gráfica se incluyen tres referencias importantes:
+
+Baseline (Z = 0) → estado basal del usuario
+
+Umbral de relajación (~0.5 σ)
+
+Umbral de estrés (~1.5 σ)
+
+Durante el intervalo observado, la señal presenta valores negativos entre −0.5 y −1.5 σ, lo que indica que la conductancia de la piel es menor que el promedio registrado durante la calibración. Esto puede interpretarse como un estado de baja activación simpática, coherente con un estado fisiológico relajado.
+
+Además, el sistema muestra el indicador:
+
+Estado: RELAJADO
+Z_mean ≈ −0.09
+SCR ≈ 0 picos/min
+
+Esto significa que:
+
+el promedio del Z-score está muy cercano al baseline
+
+no se detectan respuestas rápidas de conductancia (SCR) en la ventana analizada
+
+la actividad fisiológica es estable
+
+Por lo tanto, el algoritmo clasifica correctamente el estado del usuario como relajado, lo cual sugiere que el sistema de detección y clasificación está funcionando adecuadamente.
+
+
+## Funcionamiento del código
+
+```
+clc
+clear
+close all
+
+%% ================== CONFIG ==================
+puerto   = "COM3";
+baudrate = 115200;
+
+fs = 500;                     % OJO: si tu ESP32/Arduino NO envía 500 muestras/s reales, baja esto (p.ej. 50-200)
+Ts = 1/fs;
+
+calibSec  = 20;               % segundos de calibración (quieto, sin moverte)
+windowVis = 5;                % segundos visibles en la gráfica
+winClass  = 10;               % ventana (s) para clasificar estrés/relajación
+
+% Umbrales (por Z-score respecto a calibración)
+Z_STRESS   = 1.5;             % si sube > 1.5 sigmas sostenido → estrés probable
+Z_RELAX    = 0.5;             % si está cerca de baseline (< 0.5 sigmas) → relajado probable
+
+% Parámetros de "eventos" (SCR) para robustez
+peakMinDistSec = 1.0;         % mínimo 1s entre picos
+peakMinPromZ   = 1.0;         % prominencia mínima en unidades Z (aprox)
+
+%% ================== SERIAL ==================
+s = serialport(puerto, baudrate);
+configureTerminator(s,"LF");
+s.Timeout = 2;                % evita bloqueos eternos
+flush(s);
+
+fprintf("Conectado a %s @ %d\n", puerto, baudrate);
+
+%% ================== FUNCIÓN LECTURA ROBUSTA ==================
+readOne = @() localReadLineAsDouble(s);
+
+%% ================== 1) CALIBRACIÓN ==================
+Ncal = round(calibSec*fs);
+cal  = nan(Ncal,1);
+
+fprintf("\n=== CALIBRACIÓN (%ds) ===\n", calibSec);
+fprintf("Quédate quiet@ y relajad@...\n");
+
+% Gráfica calibración
+Nvis = max(10, round(windowVis*fs));
+buf  = zeros(Nvis,1);
+tvis = (-Nvis+1:0)'/fs;
+
+figure('Name','GSR/EDA - Calibración')
+h = plot(tvis, buf, 'LineWidth', 1.5); grid on
+xlabel('Tiempo [s]')
+ylabel('Señal (ADC / unidades crudas)')
+title('CALIBRACIÓN: mantente quiet@')
+drawnow
+
+i = 1;
+while i <= Ncal
+    v = readOne();
+    if ~isnan(v)
+        cal(i) = v;
+
+        buf(1:end-1) = buf(2:end);
+        buf(end)     = v;
+
+        % Suavizado solo visual
+        yv = movmean(buf, 5);
+        h.YData = yv;
+
+        % Escala suave
+        ytmp = yv(~isnan(yv));
+        if ~isempty(ytmp)
+            yr = max(1, 1.2*range(ytmp));
+            ym = mean(ytmp);
+            ylim([ym-yr ym+yr]);
+        end
+
+        drawnow limitrate
+        i = i + 1;
+    end
+end
+
+% Baseline de calibración (suaviza un poco para robustez)
+cal_f = movmean(cal, 5, 'omitnan');
+base_mu  = mean(cal_f, 'omitnan');
+base_sig = std(cal_f,  'omitnan');
+
+% Evitar sigma cero
+if base_sig < 1e-6
+    base_sig = 1e-6;
+end
+
+fprintf("Baseline (mu)=%.3f | sigma=%.3f\n", base_mu, base_sig);
+
+%% ================== 2) ADQUISICIÓN + CLASIFICACIÓN ==================
+respuesta = inputdlg("Tiempo de grabación (s):","GSR/EDA",1,{"30"});
+T = str2double(respuesta{1});
+if isnan(T) || T<=0
+    clear s
+    error("Tiempo inválido");
+end
+
+N = round(T*fs);
+t = (0:N-1)'/fs;
+datos = nan(N,1);
+
+% buffers para clasificación
+Nclass = max(5, round(winClass*fs));
+bufClass = nan(Nclass,1);
+
+% Parámetros pico
+peakMinDist = round(peakMinDistSec*fs);
+
+figure('Name','GSR/EDA - Tiempo real')
+buf2  = zeros(Nvis,1);
+h2 = plot(tvis, buf2, 'LineWidth', 1.5); grid on
+xlabel('Tiempo [s]')
+ylabel('Z-score (respecto a calibración)')
+title('GSR/EDA en tiempo real')
+hold on
+yline(Z_STRESS,'--','Estrés (umbral)');
+yline(Z_RELAX ,'--','Relajado (cerca baseline)');
+yline(0,'-','Baseline');
+hold off
+
+txt = annotation('textbox',[0.15 0.80 0.7 0.12], ...
+    'String',"Estado: ...", 'FitBoxToText','on', ...
+    'FontSize',12,'FontWeight','bold');
+
+fprintf("\n=== GRABACIÓN (%ds) ===\n", T);
+fprintf("Leyendo y clasificando...\n");
+
+i = 1;
+while i <= N
+    v = readOne();
+    if ~isnan(v)
+
+        datos(i) = v;
+
+        % --------- buffer visual (convertido a Z para ver claro) ----------
+        buf2(1:end-1) = buf2(2:end);
+        z = (v - base_mu)/base_sig;
+        buf2(end) = z;
+
+        % suavizado visual
+        yv = movmean(buf2, 9);
+        h2.YData = yv;
+
+        % eje Y fijo razonable (evita saltos molestos)
+        ylim([-4 6]);
+
+        % --------- buffer clasificación (últimos winClass s) ----------
+        bufClass(1:end-1) = bufClass(2:end);
+        bufClass(end)     = v;
+
+        % Clasificar cuando ya hay suficiente historia
+        if sum(~isnan(bufClass)) > 0.7*Nclass
+            x = bufClass;
+            x = movmean(x, 9, 'omitnan');      % suaviza para rasgo tónico
+            zwin = (x - base_mu)/base_sig;
+
+            % Rasgo 1: nivel tónico (promedio Z en ventana)
+            z_mean = mean(zwin, 'omitnan');
+
+            % Rasgo 2: "eventos" (picos) por minuto aprox
+            zw = zwin(~isnan(zwin));
+            scr_rate_min = 0;
+            if numel(zw) > peakMinDist+10
+                % contamos picos en Z (prominencia y distancia)
+                [pks, locs] = findpeaks(zw, ...
+                    'MinPeakDistance', peakMinDist, ...
+                    'MinPeakProminence', peakMinPromZ);
+                scr_rate_min = (numel(pks) / winClass) * 60; % picos/min
+            end
+
+            % Reglas simples (robustas)
+            if (z_mean >= Z_STRESS) || (scr_rate_min >= 12)    % >=12 picos/min (ajustable)
+                estado = "ESTRÉS probable";
+            elseif (z_mean <= Z_RELAX) && (scr_rate_min <= 6)  % <=6 picos/min
+                estado = "RELAJADO";
+            else
+                estado = "NEUTRO / transitorio";
+            end
+
+            txt.String = sprintf("Estado: %s\nZ_mean=%.2f | SCR≈%.1f picos/min", ...
+                                 estado, z_mean, scr_rate_min);
+        end
+
+        drawnow limitrate
+        i = i + 1;
+    end
+end
+
+%% ================== GUARDADO ==================
+out.nombre_archivo = "GSR_EDA_" + datestr(now,"yyyymmdd_HHMMSS") + ".mat";
+out.fs = fs;
+out.t  = t;
+out.datos = datos;
+out.calibracion = cal;
+out.baseline_mu = base_mu;
+out.baseline_sigma = base_sig;
+save(out.nombre_archivo, "-struct", "out");
+
+fprintf("\nGuardado: %s\n", out.nombre_archivo);
+
+clear s
+disp("Listo: calibración + grabación + clasificación finalizadas")
+
+%% ================== FUNCIÓN LOCAL ==================
+function v = localReadLineAsDouble(s)
+    v = nan;
+    try
+        if s.NumBytesAvailable > 0
+            str = readline(s);
+            str = strtrim(str);
+            % limpia cosas raras tipo "GSR:1234"
+            tok = regexp(str,'[-+]?\d*\.?\d+','match');
+            if ~isempty(tok)
+                v = str2double(tok{end});
+                if ~isfinite(v), v = nan; end
+            end
+        end
+    catch
+        v = nan;
+    end
+% end
+```
+
 ---
 
 # Preguntas de análisis

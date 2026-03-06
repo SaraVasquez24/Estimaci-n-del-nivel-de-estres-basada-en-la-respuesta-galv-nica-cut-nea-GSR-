@@ -316,33 +316,33 @@ close all
 puerto   = "COM3";
 baudrate = 115200;
 
-fs = 500;                     % OJO: si tu ESP32/Arduino NO envía 500 muestras/s reales, baja esto (p.ej. 50-200)
+fs = 500;                     
 Ts = 1/fs;
 
-calibSec  = 20;               % segundos de calibración (quieto, sin moverte)
-windowVis = 5;                % segundos visibles en la gráfica
-winClass  = 10;               % ventana (s) para clasificar estrés/relajación
+calibSec  = 20;               
+windowVis = 5;                
+winClass  = 10;               
 
 % Umbrales (por Z-score respecto a calibración)
 Z_STRESS   = 1.5;             % si sube > 1.5 sigmas sostenido → estrés probable
 Z_RELAX    = 0.5;             % si está cerca de baseline (< 0.5 sigmas) → relajado probable
 
 % Parámetros de "eventos" (SCR) para robustez
-peakMinDistSec = 1.0;         % mínimo 1s entre picos
-peakMinPromZ   = 1.0;         % prominencia mínima en unidades Z (aprox)
+peakMinDistSec = 1.0;         
+peakMinPromZ   = 1.0;         
 
 %% ================== SERIAL ==================
 s = serialport(puerto, baudrate);
 configureTerminator(s,"LF");
-s.Timeout = 2;                % evita bloqueos eternos
+s.Timeout = 2;               
 flush(s);
 
 fprintf("Conectado a %s @ %d\n", puerto, baudrate);
 
-%% ================== FUNCIÓN LECTURA ROBUSTA ==================
+%% ================== FUNCIÓN LECTURA ==================
 readOne = @() localReadLineAsDouble(s);
 
-%% ================== 1) CALIBRACIÓN ==================
+%% ================== CALIBRACIÓN ==================
 Ncal = round(calibSec*fs);
 cal  = nan(Ncal,1);
 
@@ -399,7 +399,7 @@ end
 
 fprintf("Baseline (mu)=%.3f | sigma=%.3f\n", base_mu, base_sig);
 
-%% ================== 2) ADQUISICIÓN + CLASIFICACIÓN ==================
+%% ================== ADQUISICIÓN + CLASIFICACIÓN ==================
 respuesta = inputdlg("Tiempo de grabación (s):","GSR/EDA",1,{"30"});
 T = str2double(respuesta{1});
 if isnan(T) || T<=0
@@ -463,7 +463,7 @@ while i <= N
         % Clasificar cuando ya hay suficiente historia
         if sum(~isnan(bufClass)) > 0.7*Nclass
             x = bufClass;
-            x = movmean(x, 9, 'omitnan');      % suaviza para rasgo tónico
+            x = movmean(x, 9, 'omitnan');      
             zwin = (x - base_mu)/base_sig;
 
             % Rasgo 1: nivel tónico (promedio Z en ventana)
@@ -477,13 +477,13 @@ while i <= N
                 [pks, locs] = findpeaks(zw, ...
                     'MinPeakDistance', peakMinDist, ...
                     'MinPeakProminence', peakMinPromZ);
-                scr_rate_min = (numel(pks) / winClass) * 60; % picos/min
+                scr_rate_min = (numel(pks) / winClass) * 60; 
             end
 
             % Reglas simples (robustas)
-            if (z_mean >= Z_STRESS) || (scr_rate_min >= 12)    % >=12 picos/min (ajustable)
+            if (z_mean >= Z_STRESS) || (scr_rate_min >= 12)    
                 estado = "ESTRÉS probable";
-            elseif (z_mean <= Z_RELAX) && (scr_rate_min <= 6)  % <=6 picos/min
+            elseif (z_mean <= Z_RELAX) && (scr_rate_min <= 6)  
                 estado = "RELAJADO";
             else
                 estado = "NEUTRO / transitorio";
@@ -533,6 +533,98 @@ function v = localReadLineAsDouble(s)
 % end
 ```
 
+El código desarrollado en MATLAB implementa un sistema completo de adquisición, procesamiento y clasificación de señales GSR en tiempo real. Su funcionamiento puede dividirse en varias etapas principales.
+
+#### Comunicación con el microcontrolador
+
+El programa establece comunicación serial con el microcontrolador (ESP32):
+
+Puerto: COM3
+Velocidad: 115200 baudios
+
+Los datos transmitidos corresponden a valores de ADC que representan el voltaje del divisor resistivo formado por la resistencia fija y la resistencia de la piel.
+
+El código incluye una función de lectura (localReadLineAsDouble) que:
+
+limpia caracteres no numéricos
+evita errores de lectura
+descarta valores inválidos.
+
+Esto mejora significativamente la estabilidad del sistema de adquisición.
+
+#### Etapa de calibración
+
+Durante los primeros 20 segundos, el sistema registra la señal mientras el usuario permanece en reposo.
+
+En esta fase se calcula:
+μ (media) de la señal
+σ (desviación estándar)
+
+Estos valores representan el estado fisiológico basal del usuario.
+
+Posteriormente, cualquier nueva medición se transforma mediante el cálculo de Z-score, lo que permite analizar variaciones relativas respecto al estado inicial.
+
+#### Visualización en tiempo real
+
+El sistema muestra la señal en tiempo real utilizando:
+
+una ventana deslizante de 5 segundos
+un suavizado mediante media móvil
+
+Esto permite observar las tendencias fisiológicas sin que el ruido eléctrico afecte significativamente la visualización.
+
+Además, el eje vertical se fija entre −4 y 6 Z-score, evitando cambios bruscos de escala que dificulten la interpretación visual.
+
+#### Extracción de características fisiológicas
+
+El algoritmo analiza dos tipos de características de la señal GSR:
+
+1. Nivel tónico (SCL)
+Se calcula el promedio del Z-score en una ventana de 10 segundos, lo cual representa el nivel general de activación del sistema nervioso simpático.
+
+Valores altos pueden indicar:
+estrés
+carga cognitiva
+excitación emocional.
+
+2. Eventos fásicos (SCR)
+
+El código utiliza la función findpeaks para detectar picos de conductancia cutánea, que representan respuestas rápidas del sistema nervioso simpático.
+
+Se establecen dos condiciones:
+distancia mínima entre picos: 1 segundo
+prominencia mínima: 1 unidad Z
+
+A partir de estos picos se calcula la tasa de eventos:
+SCR rate = picos por minuto
+
+Este parámetro es ampliamente utilizado en estudios psicofisiológicos para evaluar activación emocional o estrés.
+
+#### Clasificación del estado fisiológico
+
+El sistema utiliza reglas simples pero robustas para clasificar el estado del usuario:
+Estrés probable
+
+Se detecta cuando:
+Z_mean ≥ 1.5
+SCR ≥ 12 picos/min
+
+Esto indica una activación simpática elevada y sostenida.
+Estado relajado
+Se clasifica como relajado cuando:
+Z_mean ≤ 0.5
+SCR ≤ 6 picos/min
+
+Lo cual indica baja activación fisiológica.
+Estado neutro o transitorio
+Cuando la señal no cumple claramente con ninguna de las condiciones anteriores.
+
+Esto puede ocurrir durante:
+transiciones fisiológicas
+movimientos
+pequeños estímulos.
+
+
 ---
 
 # Preguntas de análisis
@@ -572,4 +664,12 @@ pueden introducir **ruido o artefactos en la señal**.
 Otra limitación relevante es que la respuesta fisiológica puede variar considerablemente entre individuos, debido a diferencias en la actividad de las glándulas sudoríparas, la hidratación de la piel o características fisiológicas propias de cada persona.
 
 Por estas razones, la GSR suele utilizarse como **un indicador complementario dentro de sistemas de monitoreo fisiológico multimodal**, en los que se combinan diferentes señales biomédicas para obtener una evaluación más completa del estado fisiológico del usuario.
+
+## Conclusión
+
+Durante el desarrollo del código para el análisis de la conductancia cutánea se logró cargar y procesar la señal registrada, aplicar el filtrado necesario y visualizar las variaciones de la señal a lo largo del tiempo. Esto permitió identificar cambios en la conductancia asociados a diferentes momentos del registro y comprobar que el procesamiento digital implementado facilita una interpretación más clara de la señal fisiológica. El código desarrollado demuestra cómo, a partir de datos crudos, es posible obtener información útil mediante técnicas básicas de procesamiento y análisis de señales.
+
+## Enseñanza
+
+La principal enseñanza de esta práctica fue comprender la importancia de cada etapa del procesamiento de señales biomédicas, desde la lectura de los datos y su limpieza hasta la visualización e interpretación. Implementar el código permitió evidenciar cómo pequeñas decisiones en el tratamiento de la señal pueden influir en la calidad del análisis y en la capacidad de detectar cambios fisiológicos reales.
 
